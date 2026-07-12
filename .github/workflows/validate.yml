@@ -1,0 +1,32 @@
+name: Validate
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+          cache: pip
+      - name: Install from checkout
+        run: python -m pip install -e ".[dev]" build
+      - name: Run tests
+        run: python -m pytest -q
+      - name: Check Python syntax
+        run: python -m compileall -q src tests normalize_reg.py scan_pe.py
+      - name: Check installed entrypoints
+        run: |
+          winecap --help
+          normalize-reg --help
+          scan-pe --help
+      - name: Build distributions
+        run: python -m build

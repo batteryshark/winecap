@@ -1,11 +1,26 @@
-# winecap
+<p align="center">
+  <img src="assets/winecap-logo-480.png" width="480" alt="Winecap robot photographing file and registry changes captured in a glass of red wine">
+</p>
 
-`winecap` captures what a Windows installer changes inside a Wine prefix, helps you review those changes, and exports the useful files and registry keys.
+# Winecap
+
+`winecap` helps developers and software preservationists capture what a Windows
+installer changes inside a Wine prefix, review those changes, and export the
+useful files and registry keys.
 
 The project also includes two companion tools:
 
 - `normalize-reg`: clean exported `.reg` files by removing WOW64 path noise and hard-coded user SIDs.
 - `scan-pe`: scan DLL/EXE trees and print architecture, version, timestamp, and version-resource metadata.
+
+## Repository Map
+
+- `src/winecap/` — the package, command-line interfaces, and Wine boundary.
+- `tests/` — fast unit coverage for safety checks, snapshots, registry handling,
+  normalization, and PE metadata helpers.
+- `docs/` — the architecture map and accepted package-layout decision.
+- `normalize_reg.py` and `scan_pe.py` — compatibility launchers for direct use
+  from a checkout.
 
 ## Install
 
@@ -44,7 +59,7 @@ Use `--no-review` on export when you want all non-blocklisted changes without th
 Capture and diff a Wine prefix.
 
 ```bash
-winecap init [--prefix PATH] [--arch win64|win32] [--winver win10|win7|winxp] [--force]
+winecap init [--prefix PATH] [--arch win64|win32] [--winver win10|win81|win8|win7|vista|winxp] [--force]
 winecap snapshot NAME [--prefix PATH]
 winecap list [--prefix PATH]
 winecap diff SNAPSHOT_A SNAPSHOT_B [--prefix PATH]
