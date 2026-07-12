@@ -66,9 +66,9 @@ def build_parser() -> argparse.ArgumentParser:
     export_parser.set_defaults(handler=cmd_export)
 
     run_parser = subparsers.add_parser("run", help="Run an executable inside the prefix")
-    run_parser.add_argument("executable")
-    run_parser.add_argument("args", nargs="*")
     add_prefix_argument(run_parser)
+    run_parser.add_argument("executable")
+    run_parser.add_argument("args", nargs=argparse.REMAINDER)
     run_parser.set_defaults(handler=cmd_run)
 
     return parser
@@ -81,7 +81,7 @@ def add_prefix_argument(parser: argparse.ArgumentParser) -> None:
 
 def cmd_init(args: argparse.Namespace) -> int:
     """Handle ``winecap init``."""
-    prefix = Path(args.prefix).resolve()
+    prefix = Path(args.prefix).expanduser()
     options = PrefixInitOptions(
         arch=args.arch,
         windows_version=args.winver,
@@ -99,7 +99,11 @@ def cmd_snapshot(args: argparse.Namespace) -> int:
 
     wait_for_wineserver(prefix)
     print(f"Scanning files in {prefix / 'drive_c'}...")
-    result = create_snapshot(prefix, args.name)
+    try:
+        result = create_snapshot(prefix, args.name)
+    except ValueError as error:
+        print(f"Error: {error}")
+        return 1
     print(f"  Found {result.file_count} files")
     print(f"  Found {result.registry_key_count} registry keys")
     print(f"Snapshot saved: {result.path}")
@@ -113,7 +117,11 @@ def cmd_list(args: argparse.Namespace) -> int:
         print(f"Error: Prefix not found: {prefix}")
         return 1
 
-    snapshots = list_snapshots(prefix)
+    try:
+        snapshots = list_snapshots(prefix)
+    except ValueError as error:
+        print(f"Error: {error}")
+        return 1
     if not snapshots:
         print("No snapshots found")
         return 0
@@ -192,7 +200,7 @@ def load_snapshot_pair(prefix: Path, before_name: str, after_name: str) -> tuple
 
     try:
         return load_snapshot(prefix, before_name), load_snapshot(prefix, after_name)
-    except FileNotFoundError as error:
+    except (FileNotFoundError, ValueError) as error:
         print(f"Error: {error}")
         return None
 

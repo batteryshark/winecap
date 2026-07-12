@@ -4,6 +4,7 @@ version = "0.1.0"
 description = "Capture, review, and normalize Windows installer changes in Wine prefixes"
 readme = "README.md"
 requires-python = ">=3.10"
+license = { file = "LICENSE" }
 dependencies = ["pefile>=2023.2.7"]
 
 [project.optional-dependencies]
@@ -24,3 +25,4 @@ packages = ["src/winecap"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["src"]
+addopts = ["--import-mode=importlib"]

@@ -9,6 +9,10 @@ The project also includes two companion tools:
 
 ## Install
 
+WineCap runs on a Unix-like host with `wine`, `wineboot`, and `wineserver`
+available on `PATH`, plus Wine's `winecfg` program. Python 3.10 or newer is
+required.
+
 From this checkout:
 
 ```bash
@@ -25,7 +29,7 @@ python -m pip install .
 
 ```bash
 winecap init --prefix ~/.wine_capture_test
-winecap run installer.exe --prefix ~/.wine_capture_test
+winecap run --prefix ~/.wine_capture_test installer.exe
 winecap snapshot post_install --prefix ~/.wine_capture_test
 winecap diff baseline post_install --prefix ~/.wine_capture_test
 winecap export baseline post_install ./output --prefix ~/.wine_capture_test
@@ -45,10 +49,14 @@ winecap snapshot NAME [--prefix PATH]
 winecap list [--prefix PATH]
 winecap diff SNAPSHOT_A SNAPSHOT_B [--prefix PATH]
 winecap export SNAPSHOT_A SNAPSHOT_B OUTPUT_DIR [--prefix PATH] [--no-review]
-winecap run INSTALLER.exe [args...] [--prefix PATH]
+winecap run [--prefix PATH] INSTALLER.exe [args...]
 ```
 
 Snapshots are stored in the prefix under `.snapshots/`. The diff logic compares file hashes and Wine registry hives, while filtering strict Wine/runtime noise such as Wine configuration and volatile hardware enumeration keys.
+
+Arguments after `INSTALLER.exe` are passed to the installer unchanged, including options that begin with `--`. Put WineCap's `--prefix` option before the installer path.
+
+`winecap init --force` permanently removes the existing prefix before recreating it. WineCap refuses dangerous paths and directories that do not positively identify as Wine prefixes, but you should still verify `--prefix` carefully.
 
 ### `normalize-reg`
 
@@ -89,7 +97,11 @@ python -m unittest discover -s tests
 Run a syntax/import sanity check:
 
 ```bash
-python -m compileall src tests winecap.py normalize_reg.py scan_pe.py
+python -m compileall src tests normalize_reg.py scan_pe.py
 ```
 
 The current package layout is documented in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md). The first architecture decision record is [docs/adr/0001-package-layout-and-cli-boundaries.md](docs/adr/0001-package-layout-and-cli-boundaries.md).
+
+## License
+
+WineCap is available under the [MIT License](LICENSE).

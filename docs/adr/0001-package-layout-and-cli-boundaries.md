@@ -12,7 +12,7 @@ The historical project had three useful command-line tools implemented as top-le
 - `normalize_reg.py`
 - `scan_pe.py`
 
-That made the tools easy to run directly, but it mixed CLI parsing, terminal output, domain logic, subprocess calls, file IO, and parsing in the same modules. The project is being prepared for a private git repository where future navigation and safe change matter more than preserving the exact script shape.
+That made the tools easy to run directly, but it mixed CLI parsing, terminal output, domain logic, subprocess calls, file IO, and parsing in the same modules. The project is now maintained as a standalone repository where future navigation and safe change matter more than preserving the exact script shape.
 
 ## Decision
 
@@ -22,7 +22,7 @@ Move the implementation into `src/winecap/` and expose public command entrypoint
 - `winecap.normalizer_cli:main`
 - `winecap.pe_cli:main`
 
-Keep tiny compatibility launchers at the old top-level paths so direct checkout usage still works.
+Keep tiny compatibility launchers for `normalize_reg.py` and `scan_pe.py`. Do not keep a root `winecap.py`: from the repository root, that filename shadows the `winecap` package and breaks normal package imports. Direct checkout usage remains available through `python -m winecap`.
 
 Split responsibilities by behavior:
 
@@ -40,7 +40,7 @@ Positive:
 - Domain behavior can be tested without invoking Wine.
 - Importing normalizer and scanner helpers no longer requires running CLI code.
 - `pefile` is imported lazily, so non-PE workflows remain easier to test.
-- The old script names still work as compatibility entrypoints.
+- The non-conflicting old script names still work as compatibility entrypoints.
 
 Tradeoffs:
 
@@ -51,5 +51,5 @@ Tradeoffs:
 ## Reconsider If
 
 - The project becomes a single-purpose script again.
-- The compatibility launchers start accumulating logic.
+- The remaining compatibility launchers start accumulating logic.
 - A new packaging target requires a different import layout.

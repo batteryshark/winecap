@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
@@ -15,6 +16,7 @@ DEFAULT_PREFIX = Path.home() / ".wine_capture"
 SNAPSHOTS_DIR = ".snapshots"
 HASH_CHUNK_SIZE = 1024 * 64
 FILE_BLOCKLIST = (".update-timestamp", ".windows-serial", SNAPSHOTS_DIR)
+SNAPSHOT_NAME_PATTERN = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]{0,63}\Z")
 
 FileSnapshot = dict[str, dict[str, float | int | str]]
 Snapshot = dict[str, Any]
@@ -32,9 +34,7 @@ class SnapshotResult:
 
 def create_snapshot(prefix: Path, name: str) -> SnapshotResult:
     """Capture files and registry hives from a Wine prefix."""
-    snapshots_dir = prefix / SNAPSHOTS_DIR
-    snapshots_dir.mkdir(exist_ok=True)
-    snapshot_path = snapshots_dir / f"{name}.json"
+    snapshot_path = snapshot_path_for(prefix, name, create_directory=True)
 
     files = scan_prefix_files(prefix)
     registry = read_registry_hives(prefix)
@@ -104,7 +104,7 @@ def is_ignored_prefix_file(relative_path: Path) -> bool:
 
 def load_snapshot(prefix: Path, name: str) -> Snapshot:
     """Load a named snapshot from a prefix."""
-    snapshot_path = prefix / SNAPSHOTS_DIR / f"{name}.json"
+    snapshot_path = snapshot_path_for(prefix, name)
     if not snapshot_path.exists():
         raise FileNotFoundError(f"Snapshot not found: {name}")
     return json.loads(snapshot_path.read_text(encoding="utf-8"))
@@ -112,14 +112,50 @@ def load_snapshot(prefix: Path, name: str) -> Snapshot:
 
 def list_snapshots(prefix: Path) -> list[dict[str, Any]]:
     """Return summary rows for every snapshot in a prefix."""
+    prefix = prefix.expanduser().resolve()
     snapshots_dir = prefix / SNAPSHOTS_DIR
+    if snapshots_dir.is_symlink():
+        raise ValueError(f"Snapshot directory must not be a symbolic link: {snapshots_dir}")
     if not snapshots_dir.exists():
         return []
+    snapshots_dir = snapshots_dir.resolve()
+    if snapshots_dir.parent != prefix:
+        raise ValueError(f"Snapshot directory escapes the Wine prefix: {snapshots_dir}")
 
     snapshots = []
     for snapshot_file in sorted(snapshots_dir.glob("*.json")):
+        if snapshot_file.is_symlink():
+            continue
         snapshots.append(_snapshot_summary(snapshot_file))
     return snapshots
+
+
+def snapshot_path_for(prefix: Path, name: str, *, create_directory: bool = False) -> Path:
+    """Return a contained snapshot path for a safe leaf name."""
+    if not SNAPSHOT_NAME_PATTERN.fullmatch(name):
+        raise ValueError(
+            "Snapshot names must be 1-64 characters and contain only letters, "
+            "numbers, dots, underscores, or hyphens."
+        )
+
+    prefix = prefix.expanduser().resolve()
+    snapshots_dir = prefix / SNAPSHOTS_DIR
+    if snapshots_dir.is_symlink():
+        raise ValueError(f"Snapshot directory must not be a symbolic link: {snapshots_dir}")
+    if create_directory:
+        snapshots_dir.mkdir(exist_ok=True)
+
+    resolved_dir = snapshots_dir.resolve()
+    if resolved_dir.parent != prefix:
+        raise ValueError(f"Snapshot directory escapes the Wine prefix: {snapshots_dir}")
+
+    snapshot_path = resolved_dir / f"{name}.json"
+    if snapshot_path.is_symlink():
+        raise ValueError(f"Snapshot file must not be a symbolic link: {snapshot_path}")
+    resolved_path = snapshot_path.resolve()
+    if resolved_path.parent != resolved_dir:
+        raise ValueError(f"Snapshot path escapes the snapshot directory: {name}")
+    return resolved_path
 
 
 def diff_snapshots(before: Snapshot, after: Snapshot) -> SnapshotDiff:
